@@ -8,19 +8,19 @@ I0328 19:16:21.817721    8688 bufferTest.go:28] Put Data begin..............
 I0328 19:16:32.530334    8688 bufferTest.go:32] Put Data End:cap(10) len(1) bufCap(4096) putSize(5120000) getSize(5120000) newBufCount(0)
 
 =======================================================10读  10取  5120000===================================================================
-10读  10取   512000*10   8s
+10读  10取   5120000     8s
 I0328 18:33:56.761152    8460 bufferTest.go:28] Put Data begin..............
 I0328 18:34:08.922848    8460 bufferTest.go:32] Put Data End:cap(10) len(1) bufCap(4096) putSize(5120000) getSize(5120000)
 
-10读  10取   512000*10   20s   newBufCount 次数过多
+10读  10取   5120000     20s   newBufCount 次数过多
 I0328 18:41:37.732519    9148 bufferTest.go:28] Put Data begin..............
 I0328 18:41:57.751664    9148 bufferTest.go:32] Put Data End:cap(10) len(10) bufCap(4096) putSize(5074669) getSize(5074669) newBufCount(9)
 
-10读  10取   512000*10   12s
+10读  10取   5120000     12s
 I0328 18:47:49.383776    6768 bufferTest.go:38] Put Data begin..............
 I0328 18:48:01.601475    6768 bufferTest.go:32] Put Data End:cap(10) len(1) bufCap(4096) putSize(5120000) getSize(5120000) newBufCount(0)
 
-10读  10取   512000*10   11s
+10读  10取   5120000     11s
 I0328 19:12:03.174928    7284 bufferTest.go:28] Put Data begin..............
 I0328 19:12:14.860596    7284 bufferTest.go:32] Put Data End:cap(10) len(1) bufCap(4096) putSize(5120000) getSize(5120000) newBufCount(0)
 
@@ -33,6 +33,7 @@ I0328 19:18:50.952251    4104 bufferTest.go:32] Put Data End:cap(10) len(1) bufC
 I0328 19:20:56.327422    5276 bufferTest.go:38] Put Data begin..............
 I0328 19:22:47.862802    5276 bufferTest.go:32] Put Data End:cap(10) len(1) bufCap(4096) putSize(51200000) getSize(51200000) newBufCount(8)
 
+
 =========================================================10存  10取 51200000==============================================================
 10存   10取  51200000   127s
 I0328 19:24:17.633937    3844 bufferTest.go:28] Put Data begin..............
@@ -41,3 +42,12 @@ I0328 19:26:24.682203    3844 bufferTest.go:32] Put Data End:cap(10) len(1) bufC
 10存   10取  51200000   130s
 I0328 19:27:33.402134    7952 bufferTest.go:38] Put Data begin..............
 I0328 19:29:43.963602    7952 bufferTest.go:32] Put Data End:cap(10) len(1) bufCap(4096) putSize(51200000) getSize(51199999) newBufCount(0)
+
+=========================================================1存  10取 5120000==============================================================
+1存   10取  5120000     64s
+I0328 19:53:13.080198    2584 bufferTest.go:38] Put Data begin..............
+I0328 19:54:17.131862    2584 bufferTest.go:32] Put Data End:cap(10) len(1) bufCap(4096) putSize(5120000) getSize(5120000) newBufCount(0)
+
+1存   10取  5120000     63s
+I0328 19:57:34.095128    8604 bufferTest.go:38] Put Data begin..............
+I0328 19:58:37.163735    8604 bufferTest.go:32] Put Data End:cap(10) len(1) bufCap(4096) putSize(5120000) getSize(5120000) newBufCount(0)
