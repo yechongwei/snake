@@ -3,7 +3,7 @@ package main
 
 import (
 	"flag"
-	"snakeProject/src/buffer"
+	"buffer"
 	"time"
 
 	"github.com/golang/glog"
