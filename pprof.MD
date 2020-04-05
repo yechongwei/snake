@@ -19,4 +19,9 @@ if runtime.GOOS == "windows" {
 方法二:go-torch profile.prof profile.svg   
 ###go tool pprof使用方法  
 go tool pprof [执行程序][分析文件] 
-linux下进入终端后可gif结果保存图片显示 svg
+linux下进入终端后可gif结果保存图片显示 svg   
+###相关网站参考:   
+https://www.cnblogs.com/Dr-wei/p/11742414.html   
+http://xiaorui.cc/archives/5138   
+https://github.com/hyper0x/go_command_tutorial/blob/master/0.12.md   
+https://www.jb51.net/article/144788.htm   
