@@ -6,28 +6,50 @@ import (
 
 //IList 接口类
 type IList interface {
-	Len() uint32
+	Len() int
 	IsEmpty() bool
-	Push(index uint32, data interface{}) bool
+	Clear()
+	ListGetIterator() IIterator
+	Push(index int, data interface{}) bool
 	RPush(data interface{}) bool
 	LPush(data interface{}) bool
-	Pop(index uint32) interface{}
-	RPop() interface{}
-	LPop() interface{}
-	//匹配value值相同的 interface{}:为节点的存的值 返回匹配的节点位置和是否查找到 如果匹配不到则返回的第一个参数index无效
-	Match(key interface{}, fn func(key, value interface{}) bool) (uint32, bool)
+	Pop(index int) *ListNode
+	RPop() *ListNode
+	LPop() *ListNode
+	//匹配value值相同的 interface{}:为节点的存的值 返回匹配的节点
+	Match(key interface{}, fn func(key, Value interface{}) bool) *ListNode
 	//匹配value值相同的interface{}:为节点的存的值 并且返回是否找到并且删除
-	MatchAndRemove(key interface{}, fn func(key, value interface{}) bool) bool
+	MatchAndRemove(key interface{}, fn func(key, Value interface{}) bool) *ListNode
 }
 
 //ListNode 链表节点
-//value 节点存放的数据
-//prev 上一个节点
-//next  下一个节点
+//Value 节点存放的数据
+//Prev 上一个节点
+//Next  下一个节点
 type ListNode struct {
-	value interface{}
-	prev  *ListNode
-	next  *ListNode
+	Value interface{}
+	Prev  *ListNode
+	Next  *ListNode
+}
+
+//IIterator 迭代器接口
+type IIterator interface {
+	//Next 迭代器获取下一个节点
+	Next() *ListNode
+}
+
+//ListIterator 链表迭代器 配合Next使用
+type ListIterator struct {
+	next *ListNode
+}
+
+//Next 获取下个节点的数据
+func (lter *ListIterator) Next() *ListNode {
+	node := lter.next
+	if node != nil {
+		lter.next = node.Next
+	}
+	return node
 }
 
 //GoList 链表  多线程不安全 外层需要加锁保护
@@ -37,16 +59,24 @@ type ListNode struct {
 type GoList struct {
 	head   *ListNode
 	tail   *ListNode
-	len    uint32
+	len    int
 	getLen uint64
 	putLen uint64
 }
 
 func newNode(data interface{}, prev, next *ListNode) *ListNode {
 	return &ListNode{
-		value: data,
-		prev:  prev,
-		next:  next,
+		Value: data,
+		Prev:  prev,
+		Next:  next,
+	}
+}
+
+func clearNode(node *ListNode) {
+	if node != nil {
+		node.Value = nil
+		node.Prev, node.Next = nil, nil
+		node = nil
 	}
 }
 
@@ -64,7 +94,7 @@ func (l *GoList) String() string {
 }
 
 //Len  获取链表长度
-func (l *GoList) Len() uint32 {
+func (l *GoList) Len() int {
 	return l.len
 }
 
@@ -73,10 +103,19 @@ func (l *GoList) IsEmpty() bool {
 	return l.len == 0
 }
 
+//ListGetIterator 生成迭代器 配合Next 使用
+func (l *GoList) ListGetIterator() IIterator {
+	return &ListIterator{next: l.head}
+}
+
 //Push 往链表固定位置存放数据
 //存放成功返回true  失败返回false
-func (l *GoList) Push(index uint32, data interface{}) bool {
-	if index == 0 {
+func (l *GoList) Push(index int, data interface{}) bool {
+	if index < 0 {
+		index = l.len + index
+	}
+
+	if index <= 0 {
 		return l.LPush(data)
 	}
 
@@ -93,44 +132,39 @@ func (l *GoList) Push(index uint32, data interface{}) bool {
 }
 
 //lPushByIndex 如果插入位置在左半边 则从头往尾遍历寻找插入
-func (l *GoList) lPushByIndex(index uint32, data interface{}) bool {
+func (l *GoList) lPushByIndex(index int, data interface{}) bool {
 	nodeTmp := l.head
-	for i := uint32(1); i <= l.len>>1; i++ {
-		if index == i {
-			if node := newNode(data, nodeTmp, nodeTmp.next); node != nil {
-				nodeTmp.next.prev = node
-				nodeTmp.next = node
-				l.len++
-				l.putLen++
-				return true
-			} else {
-				break
-			}
-		}
-		nodeTmp = nodeTmp.next
+	for i := 1; index > 1 && i <= l.len>>1; i++ {
+		index--
+		nodeTmp = nodeTmp.Next
+	}
+
+	if node := newNode(data, nodeTmp, nodeTmp.Next); node != nil {
+		nodeTmp.Next.Prev = node
+		nodeTmp.Next = node
+		l.len++
+		l.putLen++
+		return true
 	}
 
 	return false
 }
 
 //rPushByIndex 如果插入位置在右半边 则从尾往头遍历寻找插入
-func (l *GoList) rPushByIndex(index uint32, data interface{}) bool {
+func (l *GoList) rPushByIndex(index int, data interface{}) bool {
 	nodeTmp := l.tail
-	for i := l.len - 1; i > l.len>>1; i-- {
-		if index == i {
-			if node := newNode(data, nodeTmp.prev, nodeTmp); node != nil {
-				nodeTmp.prev.next = node
-				nodeTmp.prev = node
-				l.len++
-				l.putLen++
-				return true
-			} else {
-				break
-			}
-		}
-		nodeTmp = nodeTmp.prev
+	for i := l.len - 1; index < l.len-1 && i > l.len>>1; i-- {
+		index++
+		nodeTmp = nodeTmp.Prev
 	}
 
+	if node := newNode(data, nodeTmp.Prev, nodeTmp); node != nil {
+		nodeTmp.Prev.Next = node
+		nodeTmp.Prev = node
+		l.len++
+		l.putLen++
+		return true
+	}
 	return false
 }
 
@@ -140,7 +174,7 @@ func (l *GoList) RPush(data interface{}) bool {
 		if l.tail == nil {
 			l.head = node
 		} else {
-			l.tail.next = node
+			l.tail.Next = node
 		}
 		l.tail = node
 		l.len++
@@ -156,7 +190,7 @@ func (l *GoList) LPush(data interface{}) bool {
 		if l.head == nil {
 			l.tail = node
 		} else {
-			l.head.prev = node
+			l.head.Prev = node
 		}
 		l.head = node
 		l.len++
@@ -168,12 +202,16 @@ func (l *GoList) LPush(data interface{}) bool {
 
 //Pop 从链表固定位置取数据
 //成功返回数据  失败返回nil
-func (l *GoList) Pop(index uint32) interface{} {
+func (l *GoList) Pop(index int) *ListNode {
 	if l.len == 0 {
 		return nil
 	}
 
-	if index == 0 {
+	if index < 0 {
+		index = l.len + index
+	}
+
+	if index <= 0 {
 		return l.LPop()
 	}
 
@@ -190,102 +228,112 @@ func (l *GoList) Pop(index uint32) interface{} {
 }
 
 //lPopByIndex 如果位置在左半边 则从头往尾遍历寻找取出
-func (l *GoList) lPopByIndex(index uint32) interface{} {
-	node := l.head.next
-	for i := uint32(1); i < l.len>>1; i++ {
-		if i == index {
-			node.prev.next = node.next
-			node.next.prev = node.prev
-			l.len--
-			l.getLen++
-			return node.value
-		}
-		node = node.next
+func (l *GoList) lPopByIndex(index int) *ListNode {
+	node := l.head.Next
+	for i := 1; index > 1 && i < l.len>>1; i++ {
+		index--
+		node = node.Next
 	}
-	return nil
+
+	node.Prev.Next = node.Next
+	node.Next.Prev = node.Prev
+	l.len--
+	l.getLen++
+	return node
 }
 
 //rPopByIndex 如果位置在右半边 则从后往前遍历寻找取出
-func (l *GoList) rPopByIndex(index uint32) interface{} {
-	node := l.tail.prev
-	for i := l.len - 2; i >= (l.len >> 1); i-- {
-		if i == index {
-			node.prev.next = node.next
-			node.next.prev = node.prev
-			l.len--
-			l.getLen++
-			return node.value
-		}
-		node = node.prev
+func (l *GoList) rPopByIndex(index int) *ListNode {
+	node := l.tail.Prev
+	for i := l.len - 2; index < l.len-2 && i >= (l.len>>1); i-- {
+		index++
+		node = node.Prev
 	}
-	return nil
+
+	node.Prev.Next = node.Next
+	node.Next.Prev = node.Prev
+	l.len--
+	l.getLen++
+	return node
 }
 
 //RPop 从链表尾部取数据
-func (l *GoList) RPop() interface{} {
+func (l *GoList) RPop() *ListNode {
 	if l.len == 0 {
 		return nil
 	}
 
 	node := l.tail
-	l.tail = node.prev
+	l.tail = node.Prev
 	if l.tail == nil {
 		l.head = nil
 	} else {
-		l.tail.next = nil
+		l.tail.Next = nil
 	}
 	l.len--
 	l.getLen++
 
-	return node.value
+	return node
 }
 
 //LPop 从链表头部取数据
-func (l *GoList) LPop() interface{} {
+func (l *GoList) LPop() *ListNode {
 	if l.len == 0 {
 		return nil
 	}
 
 	node := l.head
-	l.head = node.next
+	l.head = node.Next
 	if l.head == nil {
 		l.tail = nil
 	} else {
-		l.head.prev = nil
+		l.head.Prev = nil
 	}
 	l.len--
 	l.getLen++
 
-	return node.value
+	return node
 }
 
 //Match  匹配interface{} value值相同的节点  返回匹配的节点ListNode
 //key 为用户传进来的数值 这边原样传出去
-//value 为节点存放的数值
+//Value 为节点存放的数值
 //返回节点在链表的所在的位置索引index
-func (l *GoList) Match(key interface{}, fn func(key, value interface{}) bool) (uint32, bool) {
+func (l *GoList) Match(key interface{}, fn func(key, Value interface{}) bool) *ListNode {
 	node := l.head
-	for i := uint32(0); i < l.len; i++ {
-		if fn(key, node.value) {
-			return i, true
+	for i := 0; i < l.len; i++ {
+		if fn(key, node.Value) {
+			return node
 		}
-		node = node.next
+		node = node.Next
 	}
-	return 0, false
+	return nil
 }
 
 //MatchAndRemove 匹配value值相同的interface{}:为节点的存的值 并且返回删除的节点
 //key 为用户传进来的数值 这边原样传出去
-//value 为节点存放的数值
-func (l *GoList) MatchAndRemove(key interface{}, fn func(key, value interface{}) bool) bool {
+//Value 为节点存放的数值
+func (l *GoList) MatchAndRemove(key interface{}, fn func(key, Value interface{}) bool) *ListNode {
 	node := l.head
-	for i := uint32(0); i < l.len; i++ {
-		if fn(key, node.value) {
+	for i := 0; i < l.len; i++ {
+		if fn(key, node.Value) {
 			//删除节点
-			l.Pop(i)
-			return true
+			return l.Pop(i)
 		}
-		node = node.next
+		node = node.Next
 	}
-	return false
+	return nil
+}
+
+//Clear 清除链表
+func (l *GoList) Clear() {
+	var current, next *ListNode = l.head, nil
+	for i := 0; i < l.len; i++ {
+		next = current.Next
+		clearNode(current)
+		current = next
+	}
+	l.head, l.tail = nil, nil
+	l.getLen, l.putLen = 0, 0
+	l.len = 0
 }
