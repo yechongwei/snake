@@ -298,7 +298,6 @@ func (l *GoList) LPop() *ListNode {
 //Match  匹配interface{} value值相同的节点  返回匹配的节点ListNode
 //key 为用户传进来的数值 这边原样传出去
 //Value 为节点存放的数值
-//返回节点在链表的所在的位置索引index
 func (l *GoList) Match(key interface{}, fn func(key, Value interface{}) bool) *ListNode {
 	node := l.head
 	for i := 0; i < l.len; i++ {
